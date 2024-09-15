@@ -54,7 +54,14 @@ function deleteTask(button) {
     const taskElement = button.parentElement.parentElement;
     const taskId = taskElement.getAttribute('data-task-id');
 
-    tasks = tasks.filter(task => task.id !== taskId);
+    const newTasks = [];
+    for (let i = 0; i < tasks.length; i++) {
+        if (tasks[i].id !== taskId) {
+            newTasks.push(tasks[i]);
+        }
+    }
+
+    tasks = newTasks;
     renderTasks();
 }
 
@@ -62,7 +69,15 @@ function editTask(button) {
     const taskElement = button.parentElement.parentElement;
     const taskId = taskElement.getAttribute('data-task-id');
 
-    const task = tasks.find(task => task.id === taskId);
+    let task = null;
+
+    for (let i = 0; i < tasks.length; i++) {
+        if (tasks[i].id === taskId) {
+            task = tasks[i];
+            break;
+        }
+    }
+
     if (task) {
         openTaskForm(task.columnId, task);
     }
@@ -84,10 +99,20 @@ function handleDragOver(e) {
 function handleDrop(e) {
     e.preventDefault();
     const column = e.target.closest('.column');
-    if (!column) return;
+    if (!column){
+        return;
+    };
 
     const columnId = column.id;
-    const task = tasks.find(task => task.id === draggedTask);
+    let task = null;
+
+    for (let i = 0; i < tasks.length; i++) {
+        if (tasks[i].id === draggedTask) {
+            task = tasks[i];
+            break;
+        }
+    }
+
     if (task) {
         task.columnId = columnId;
         renderTasks();
@@ -101,21 +126,29 @@ function renderTasks() {
         'done': document.querySelector('#done .task-list')
     };
 
-    Object.values(columns).forEach(column => column.innerHTML = '');
+    const columnValues = Object.values(columns);
+    for (let i = 0; i < columnValues.length; i++) {
+        columnValues[i].innerHTML = '';
+    }
 
-    tasks.forEach(function(task) {
+    for (let i = 0; i < tasks.length; i++) {
+        const task = tasks[i];
         const taskElement = task.createElement();
         columns[task.columnId].appendChild(taskElement);
-    });
+    }
 }
 
+
+let enterKeyListenerAdded = false;
+
 function openTaskForm(columnId, task = null) {
-    document.getElementById('taskForm').addEventListener('keydown', function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            submitTaskForm();
-        }
-    });
+    const formElement = document.getElementById('taskForm');
+
+    if (!enterKeyListenerAdded) {
+        formElement.addEventListener('keydown', handleEnterKey);
+        enterKeyListenerAdded = true;
+    }
+
     if (task) {
         document.getElementById('taskName').value = task.name;
         document.getElementById('taskContent').value = task.content;
@@ -130,6 +163,12 @@ function openTaskForm(columnId, task = null) {
     document.getElementById('taskFormPopup').style.display = 'flex';
 }
 
+function handleEnterKey(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        submitTaskForm();
+    }
+}
 
 function closeTaskForm() {
     document.getElementById('taskForm').reset();
@@ -147,22 +186,35 @@ function submitTaskForm() {
         return;
     }
 
-    const taskExists = tasks.some(task => task.name.toLowerCase() === taskName.toLowerCase());
+    let taskExists = false;
+    for (let i = 0; i < tasks.length; i++) {
+        if (tasks[i].name.toLowerCase() === taskName.toLowerCase()) {
+            taskExists = true;
+            break;
+        }
+    }
 
     if (taskExists && !editingTaskId) {
         alert("Une tâche avec ce nom existe déjà. Veuillez choisir un autre nom.");
         return;
     }
 
+    let task = null;
     if (editingTaskId) {
-        const task = tasks.find(task => task.id === editingTaskId);
+        for (let i = 0; i < tasks.length; i++) {
+            if (tasks[i].id === editingTaskId) {
+                task = tasks[i];
+                break;
+            }
+        }
+
         if (task) {
             task.name = taskName;
             task.content = taskContent;
             task.priority = taskPriority;
         }
     } else {
-        const task = new Task(taskName, taskContent, columnId);
+        task = new Task(taskName, taskContent, columnId);
         task.priority = taskPriority;
         tasks.push(task);
     }
@@ -171,12 +223,18 @@ function submitTaskForm() {
     closeTaskForm();
 }
 
-
-
+document.addEventListener('DOMContentLoaded', () => {
+    const formElement = document.getElementById('taskForm');
+    formElement.addEventListener('keydown', handleEnterKey);
+    enterKeyListenerAdded = true;
+});
 
 const columns = document.querySelectorAll('.column');
-columns.forEach(column => {
+
+for (let i = 0; i < columns.length; i++) {
+    const column = columns[i];
     const taskList = column.querySelector('.task-list');
     taskList.addEventListener('dragover', handleDragOver);
     taskList.addEventListener('drop', handleDrop);
-});
+}
+
